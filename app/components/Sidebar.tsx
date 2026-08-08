@@ -3,7 +3,7 @@
 // Uses Lucide icons and shadcn-like markup (you can replace with shadcn primitives).
 
 import Link from 'next/link';
-import { BookOpen, FileText, Layers, CPU, Settings } from 'lucide-react';
+import { BookOpen, FileText, Layers, Cpu, Settings } from 'lucide-react';
 
 export default function Sidebar() {
   const navClass = 'flex items-center gap-3 px-3 py-2 rounded-md hover:bg-white/5 transition';
@@ -30,7 +30,7 @@ export default function Sidebar() {
         </li>
         <li>
           <Link href="/notes-ai" className={navClass}>
-            <CPU className="w-5 h-5 text-lime-400" />
+            <Cpu className="w-5 h-5 text-lime-400" />
             <span>AI Notes & Flashcards</span>
           </Link>
         </li>
