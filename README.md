@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="[./public/logo.png](https://github.com/user-attachments/assets/3ece1d97-bd37-4c35-a258-26090276af54)" alt="SNIPEZ Logo" width="180" />
+  <img src="https://github.com/user-attachments/assets/3ece1d97-bd37-4c35-a258-26090276af54" alt="SNIPEZ Logo" width="180" />
 
   # 🎯 SNIPEZ
 
