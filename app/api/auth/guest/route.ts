@@ -13,6 +13,8 @@ export async function POST(req: Request) {
     // Create a guest user via Admin API if available.
     const guestEmail = `guest+${uuidv4()}@snipez.local`;
     try {
+      // supabase.auth.admin.createUser typically returns { data, error }
+      // Use the data shape safely so TypeScript / runtime both work.
       // @ts-ignore - admin API may not be typed in this environment
       const res = await supabase.auth.admin.createUser({
         email: guestEmail,
@@ -20,12 +22,15 @@ export async function POST(req: Request) {
         email_confirm: true,
       });
 
-      if (res.error) {
-        return NextResponse.json({ error: 'Failed to create guest user', details: res.error.message }, { status: 500 });
+      // Prefer the modern shape: res.data.user
+      const userObj = (res && (res as any).data && (res as any).data.user) || (res && (res as any).user) || null;
+
+      if ((res as any).error) {
+        return NextResponse.json({ error: 'Failed to create guest user', details: (res as any).error?.message ?? (res as any).error }, { status: 500 });
       }
 
       // Create profile record
-      const userId = (res.user && (res.user as any).id) || null;
+      const userId = userObj?.id ?? null;
       if (userId) {
         await supabase.from('profiles').insert({ id: userId, email: guestEmail, display_name: 'Guest' });
       }
