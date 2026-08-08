@@ -16,13 +16,15 @@ export default function LoginPage() {
     try {
       const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
       if (error) {
-        setMsg(`Error: ${error.message}`);
+        // Friendly error messages
+        if (error.message.includes('Invalid')) setMsg('Invalid credentials — check your email and password.');
+        else setMsg(`Error: ${error.message}`);
         return;
       }
-      setMsg('Signed in');
+      setMsg('Signed in — redirecting...');
       router.push('/dashboard');
     } catch (e: any) {
-      setMsg(String(e));
+      setMsg('Network error — cannot reach authentication server. Check environment configuration.');
     }
   }
 

@@ -1,9 +1,7 @@
+// Improve AI route error messages and parsing fallbacks
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSupabaseServerClient } from '../../../lib/supabase/server';
-
-// Route: POST /api/analyze-and-summarize
-// Body: { text?: string, imageBase64?: string, filename?: string, userId: string }
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,11 +40,7 @@ export async function POST(req: NextRequest) {
         .from('uploads')
         .createSignedUrl((uploadData as any).path, 60 * 60);
 
-      if (signedError) {
-        console.warn('Signed URL error', signedError);
-      } else {
-        uploadedUrl = signed.signedUrl;
-      }
+      if (!signedError) uploadedUrl = signed.signedUrl;
 
       await supabaseServerClient.from('uploads').insert({
         user_id: userId,
@@ -57,22 +51,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Build prompt for Gemini / Generative API
     const promptParts: string[] = [];
     if (text) promptParts.push(`SOURCE_TEXT:\n${text}`);
     if (uploadedUrl) promptParts.push(`IMAGE_URL:\n${uploadedUrl}`);
 
     promptParts.push(
-      `INSTRUCTIONS:
-You are an educational assistant. Produce a concise structured JSON containing:
-1) summary: 6-12 short bullet points capturing the key facts/ideas.
-2) flashcards: array of up to 12 {front, back} pairs for active recall.
-3) quizzes: array of up to 8 exam-style questions with fields {question, hint, model_answer}.
-
-Respond ONLY with JSON parsable output matching:
-{"summary":["..."], "flashcards":[{"front":"...","back":"..."}], "quizzes":[{"question":"...","hint":"...", "model_answer":"..."}]}
-
-Prioritise clarity, exam-focused language, and GCSE-level phrasing.`
+      `INSTRUCTIONS:\nYou are an educational assistant. Produce a concise structured JSON containing:\n1) summary: 6-12 short bullet points.\n2) flashcards: array of up to 12 {front, back} pairs.\n3) quizzes: array of up to 8 exam-style questions with fields {question, hint, model_answer}.\nRespond ONLY with JSON parsable output matching:{"summary":["..."], "flashcards":[{"front":"...","back":"..."}], "quizzes":[{"question":"...","hint":"...", "model_answer":"..."}]}`
     );
 
     const finalPrompt = promptParts.join('\n\n');
@@ -81,10 +65,9 @@ Prioritise clarity, exam-focused language, and GCSE-level phrasing.`
     const geminiUrl = process.env.GEMINI_API_URL || process.env.GENERATIVE_API_URL;
 
     if (!geminiKey || !geminiUrl) {
-      return NextResponse.json({ error: 'Missing GEMINI_API_KEY or GEMINI_API_URL' }, { status: 500 });
+      return NextResponse.json({ error: 'AI integration not configured. Please set GEMINI_API_KEY and GEMINI_API_URL in environment.' }, { status: 500 });
     }
 
-    // Call Gemini/Generative API via generic REST endpoint
     const model = 'gemini-2.5-flash';
 
     const resp = await fetch(`${geminiUrl}/v1/models/${model}:generate`, {
@@ -109,7 +92,6 @@ Prioritise clarity, exam-focused language, and GCSE-level phrasing.`
 
     const apiResult = await resp.json();
 
-    // Attempt to extract text output and parse JSON
     let modelText = '';
     if (apiResult.output?.[0]?.content?.[0]?.text) {
       modelText = apiResult.output[0].content[0].text;
@@ -139,7 +121,6 @@ Prioritise clarity, exam-focused language, and GCSE-level phrasing.`
     const flashcards: Array<{ front: string; back: string }> = parsed.flashcards ?? [];
     const quizzes: Array<{ question: string; hint?: string; model_answer?: string }> = parsed.quizzes ?? [];
 
-    // Insert a note record and create flashcards + decks as needed
     const noteTitle = `AI Summary ${new Date().toISOString()}`;
     const { data: noteData, error: noteError } = await supabaseServerClient.from('notes').insert({
       user_id: userId,
@@ -151,7 +132,6 @@ Prioritise clarity, exam-focused language, and GCSE-level phrasing.`
 
     if (noteError) console.warn('Failed to insert note', noteError);
 
-    // Optionally create a deck and flashcards for the user
     let deckId: string | null = null;
     const deckTitle = `AI: ${noteTitle}`;
     const { data: existingDeck } = await supabaseServerClient.from('decks').select('id').eq('user_id', userId).eq('title', deckTitle).maybeSingle();

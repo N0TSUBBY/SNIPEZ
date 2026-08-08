@@ -2,9 +2,6 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '../../../lib/supabase/server';
 
-// POST /api/grade-answer
-// Body: { userId, question, expectedAnswer, studentAnswer, quizSessionId? }
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -18,28 +15,12 @@ export async function POST(req: NextRequest) {
     const geminiUrl = process.env.GEMINI_API_URL || process.env.GENERATIVE_API_URL;
 
     if (!geminiKey || !geminiUrl) {
-      return NextResponse.json({ error: 'Missing GEMINI_API_KEY or GEMINI_API_URL' }, { status: 500 });
+      return NextResponse.json({ error: 'AI integration not configured. Please set GEMINI_API_KEY and GEMINI_API_URL in environment.' }, { status: 500 });
     }
 
     const supabaseServerClient = getSupabaseServerClient();
 
-    // Build a strict grading prompt
-    const prompt = `You are an expert GCSE examiner. Grade the student's ANSWER against the EXPECTED ANSWER.
-Return strictly parsable JSON:
-{
-  "score": number,            // 0..maxScore (use maxScore 5 by default)
-  "maxScore": 5,
-  "feedback": "Detailed marking feedback and model answer.",
-  "hints": ["First hint", "Second hint - more revealing"]
-}
-
-QUESTION:\n${question}
-
-EXPECTED_ANSWER:\n${expectedAnswer}
-
-STUDENT_ANSWER:\n${studentAnswer}
-
-Mark strictly and clearly, point out missing key terms and give up to 3 hints ordered from least revealing to most revealing.`;
+    const prompt = `You are an expert GCSE examiner. Grade the student's ANSWER against the EXPECTED ANSWER.\nReturn strictly parsable JSON:{\n  "score": number,\n  "maxScore": 5,\n  "feedback": "Detailed marking feedback and model answer.",\n  "hints": ["First hint", "Second hint - more revealing"]\n}\n\nQUESTION:\n${question}\n\nEXPECTED_ANSWER:\n${expectedAnswer}\n\nSTUDENT_ANSWER:\n${studentAnswer}`;
 
     const model = 'gemini-2.5-flash';
 
@@ -94,7 +75,6 @@ Mark strictly and clearly, point out missing key terms and give up to 3 hints or
     const feedback = parsed.feedback ?? '';
     const hints = parsed.hints ?? [];
 
-    // Persist response
     try {
       await supabaseServerClient.from('quiz_responses').insert({
         quiz_session_id: quizSessionId ?? null,

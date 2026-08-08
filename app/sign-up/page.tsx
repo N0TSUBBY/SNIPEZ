@@ -16,19 +16,20 @@ export default function SignUpPage() {
     try {
       const { error } = await supabaseClient.auth.signUp({ email, password });
       if (error) {
-        setMsg(`Error: ${error.message}`);
+        if (error.message.includes('Invalid')) setMsg('Invalid request — check your email and password format.');
+        else setMsg(`Error: ${error.message}`);
         return;
       }
-      setMsg('Account created. Check your email.');
+      setMsg('Account created — check your email for a confirmation link.');
       router.push('/dashboard');
     } catch (e: any) {
-      setMsg(String(e));
+      setMsg('Network error — cannot reach authentication server. Check environment configuration.');
     }
   }
 
   return (
     <div className="max-w-md mx-auto py-12">
-      <h1 className="text-2xl font-bold mb-4">Sign up</h1>
+      <h1 className="text-2xl font-bold mb-4">Create an account</h1>
       <form onSubmit={onSignUp} className="space-y-3">
         <input className="w-full p-2 rounded bg-slate-900" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <input className="w-full p-2 rounded bg-slate-900" placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />

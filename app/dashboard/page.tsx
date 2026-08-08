@@ -1,18 +1,60 @@
 'use client';
 
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { supabaseClient } from '../../lib/supabase/client';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
-  return (
-    <div className="max-w-3xl mx-auto py-12">
-      <h1 className="text-3xl font-bold">Dashboard</h1>
-      <p className="mt-4 text-slate-300">Welcome to SNIPEZ — your revision dashboard. Use the links below to get started.</p>
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
 
-      <div className="mt-6 space-x-3">
-        <Link href="/study" className="inline-block px-4 py-2 bg-[#00aaff] rounded text-black">Start Study</Link>
-        <Link href="/past-papers" className="inline-block px-4 py-2 bg-[#ff2b4a] rounded text-white">Past Papers</Link>
-        <Link href="/notes-ai" className="inline-block px-4 py-2 border border-slate-700 rounded text-slate-100">AI Notes</Link>
-      </div>
+  useEffect(() => {
+    let mounted = true;
+    async function init() {
+      const { data: sessionData } = await supabaseClient.auth.getSession();
+      const currentUser = sessionData?.session?.user ?? null;
+      if (!mounted) return;
+      setUser(currentUser);
+      if (!currentUser) {
+        // not signed in — redirect to landing so they can sign in or guest
+        router.push('/');
+        return;
+      }
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+      if (!mounted) return;
+      setProfile(data ?? null);
+      setLoading(false);
+    }
+    init();
+    const { data: sub } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => sub.subscription?.unsubscribe && sub.subscription.unsubscribe();
+  }, [router]);
+
+  if (loading) return <div className="p-8">Loading...</div>;
+
+  if (!user) return null;
+
+  return (
+    <div className="p-8">
+      <h2 className="text-2xl font-bold">Welcome back — {profile?.display_name ?? user.email}</h2>
+      <p className="mt-2 text-slate-300">User ID: {user.id}</p>
+
+      <section className="mt-6">
+        <h3 className="text-lg font-semibold">Your quick actions</h3>
+        <ul className="mt-3 list-disc ml-6">
+          <li><a className="text-[#00aaff] underline" href="/notes-ai">Generate AI notes from uploads</a></li>
+          <li><a className="text-[#00aaff] underline" href="/study">Start a study session</a></li>
+          <li><a className="text-[#00aaff] underline" href="/past-papers">Review past papers</a></li>
+        </ul>
+      </section>
     </div>
   );
 }
