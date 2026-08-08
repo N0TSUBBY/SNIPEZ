@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="./public/logo.png" alt="SNIPEZ Logo" width="180" />
+  <img src="[./public/logo.png](https://github.com/user-attachments/assets/3ece1d97-bd37-4c35-a258-26090276af54)" alt="SNIPEZ Logo" width="180" />
 
   # 🎯 SNIPEZ
 
@@ -54,21 +54,4 @@ Designed with a dark-mode first UI using a bold **electric blue and red** theme,
 * **Deployment:** [Vercel](https://vercel.com/)
 
 ---
-
-## 🚀 Getting Started
-
-### 1. Prerequisites
-
-Make sure you have the following installed:
-* [Node.js](https://nodejs.org/) (v18.0 or later)
-* [npm](https://www.npmjs.com/) or [pnpm](https://pnpm.io/)
-* A free [Supabase](https://supabase.com/) project
-* A free [Google AI Studio](https://aistudio.google.com/) API key
-
-### 2. Clone & Install
-
-```bash
-git clone [https://github.com/your-username/snipez.git](https://github.com/your-username/snipez.git)
-cd snipez
-npm install
 
