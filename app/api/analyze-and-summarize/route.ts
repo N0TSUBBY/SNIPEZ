@@ -1,24 +1,14 @@
-// app/api/analyze-and-summarize/route.ts
-// Next.js App Router API route (POST).
-// Accepts JSON body { text?: string, imageBase64?: string, filename?: string, userId?: string }
-// - If imageBase64 is provided: stores the image in Supabase Storage (uploads bucket) and uses that URL
-// - Calls Gemini (gemini-2.5-flash) to generate structured output: summary bullets, flashcards array, quiz questions
-// - Returns structured JSON: { summary: string[], flashcards: Array<{front,back}>, quizzes: Array<{question,hint,answer}> }
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSupabaseServerClient } from '../../../lib/supabase/server';
 
-// NOTE: The Gemini client code below uses a generic fetch wrapper in case you prefer direct REST.
-// Replace with your official SDK usage as needed.
-
-type Flashcard = { front: string; back: string };
-type QuizQ = { question: string; hint?: string; model_answer: string };
+// Route: POST /api/analyze-and-summarize
+// Body: { text?: string, imageBase64?: string, filename?: string, userId: string }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { text, imageBase64, filename = `upload-${Date.now()}.png`, userId } = body;
+    const { text, imageBase64, filename = `upload-${Date.now()}.png`, userId } = body as any;
 
     if (!text && !imageBase64) {
       return NextResponse.json({ error: 'Provide text or imageBase64' }, { status: 400 });
@@ -48,7 +38,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 });
       }
 
-      // Create signed URL valid for 1 hour
       const { data: signed, error: signedError } = await supabaseServerClient.storage
         .from('uploads')
         .createSignedUrl((uploadData as any).path, 60 * 60);
@@ -59,7 +48,6 @@ export async function POST(req: NextRequest) {
         uploadedUrl = signed.signedUrl;
       }
 
-      // Insert upload metadata row
       await supabaseServerClient.from('uploads').insert({
         user_id: userId,
         bucket: 'uploads',
@@ -69,14 +57,10 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Build prompt for Gemini
+    // Build prompt for Gemini / Generative API
     const promptParts: string[] = [];
-    if (text) {
-      promptParts.push(`SOURCE_TEXT:\n${text}`);
-    }
-    if (uploadedUrl) {
-      promptParts.push(`IMAGE_URL:\n${uploadedUrl}`);
-    }
+    if (text) promptParts.push(`SOURCE_TEXT:\n${text}`);
+    if (uploadedUrl) promptParts.push(`IMAGE_URL:\n${uploadedUrl}`);
 
     promptParts.push(
       `INSTRUCTIONS:
@@ -94,14 +78,16 @@ Prioritise clarity, exam-focused language, and GCSE-level phrasing.`
     const finalPrompt = promptParts.join('\n\n');
 
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-      return NextResponse.json({ error: 'Missing GEMINI_API_KEY' }, { status: 500 });
+    const geminiUrl = process.env.GEMINI_API_URL || process.env.GENERATIVE_API_URL;
+
+    if (!geminiKey || !geminiUrl) {
+      return NextResponse.json({ error: 'Missing GEMINI_API_KEY or GEMINI_API_URL' }, { status: 500 });
     }
 
-    // Replace this endpoint with your configured Gemini/Generative API endpoint or SDK call
+    // Call Gemini/Generative API via generic REST endpoint
     const model = 'gemini-2.5-flash';
 
-    const resp = await fetch(`https://api.generativeai.example/v1/models/${model}:generate`, {
+    const resp = await fetch(`${geminiUrl}/v1/models/${model}:generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -123,8 +109,8 @@ Prioritise clarity, exam-focused language, and GCSE-level phrasing.`
 
     const apiResult = await resp.json();
 
+    // Attempt to extract text output and parse JSON
     let modelText = '';
-
     if (apiResult.output?.[0]?.content?.[0]?.text) {
       modelText = apiResult.output[0].content[0].text;
     } else if (Array.isArray(apiResult.candidates) && apiResult.candidates[0]?.content) {
@@ -146,47 +132,45 @@ Prioritise clarity, exam-focused language, and GCSE-level phrasing.`
     }
 
     if (!parsed) {
-      return NextResponse.json({
-        error: 'Failed to parse model output as JSON',
-        raw: modelText,
-      }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to parse model output as JSON', raw: modelText }, { status: 500 });
     }
 
     const summary: string[] = parsed.summary ?? [];
-    const flashcards: Flashcard[] = parsed.flashcards ?? [];
-    const quizzes: QuizQ[] = parsed.quizzes ?? [];
+    const flashcards: Array<{ front: string; back: string }> = parsed.flashcards ?? [];
+    const quizzes: Array<{ question: string; hint?: string; model_answer?: string }> = parsed.quizzes ?? [];
 
-    // Store the note
-    await supabaseServerClient.from('notes').insert({
+    // Insert a note record and create flashcards + decks as needed
+    const noteTitle = `AI Summary ${new Date().toISOString()}`;
+    const { data: noteData, error: noteError } = await supabaseServerClient.from('notes').insert({
       user_id: userId,
-      title: `Auto summary ${new Date().toISOString()}`,
-      summary_text: summary.join('\n'),
+      title: noteTitle,
+      summary: summary.join('\n'),
       extracted_text: text ?? null,
-      visual_svg_url: null,
-    });
+      svg_url: null,
+    }).select().single();
 
-    const deck = await supabaseServerClient.from('decks').insert({
-      user_id: userId,
-      title: `Auto Deck ${new Date().toISOString()}`,
-      description: 'Auto-generated by Gemini summarizer',
-    }).select('id').single();
+    if (noteError) console.warn('Failed to insert note', noteError);
 
-    if (!deck.error) {
-      const deckId = (deck.data as any).id;
-      const cardRows = flashcards.map((c: Flashcard) => ({
-        deck_id: deckId,
-        user_id: userId,
-        front: c.front,
-        back: c.back,
-      }));
-      if (cardRows.length) {
-        await supabaseServerClient.from('flashcards').insert(cardRows);
-      }
+    // Optionally create a deck and flashcards for the user
+    let deckId: string | null = null;
+    const deckTitle = `AI: ${noteTitle}`;
+    const { data: existingDeck } = await supabaseServerClient.from('decks').select('id').eq('user_id', userId).eq('title', deckTitle).maybeSingle();
+    if (existingDeck && (existingDeck as any).id) {
+      deckId = (existingDeck as any).id;
+    } else {
+      const { data: deckData, error: deckError } = await supabaseServerClient.from('decks').insert({ user_id: userId, title: deckTitle, description: 'Auto-generated from AI summary' }).select().single();
+      if (!deckError && deckData) deckId = (deckData as any).id;
     }
 
-    return NextResponse.json({ summary, flashcards, quizzes }, { status: 200 });
+    if (deckId && flashcards.length) {
+      const inserts = flashcards.map((f) => ({ deck_id: deckId, user_id: userId, front: f.front, back: f.back }));
+      const { error: fcError } = await supabaseServerClient.from('flashcards').insert(inserts);
+      if (fcError) console.warn('Failed to insert flashcards', fcError);
+    }
+
+    return NextResponse.json({ summary, flashcards, quizzes, note: noteData ?? null });
   } catch (err) {
     console.error('analyze-and-summarize error', err);
-    return NextResponse.json({ error: 'Internal server error', details: String(err) }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error', details: String(err) }, { status: 500 });
   }
 }

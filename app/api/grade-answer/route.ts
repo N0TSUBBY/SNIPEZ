@@ -1,29 +1,30 @@
-// app/api/grade-answer/route.ts
-// POST { userId, question, expectedAnswer, studentAnswer }
-// Returns structured grading: { score: number, maxScore: number, feedback: string, hints: string[] }
-
-import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '../../../lib/supabase/server';
+
+// POST /api/grade-answer
+// Body: { userId, question, expectedAnswer, studentAnswer, quizSessionId? }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, question, expectedAnswer, studentAnswer, quizSessionId } = body;
+    const { userId, question, expectedAnswer, studentAnswer, quizSessionId } = body as any;
 
     if (!userId || !question || !expectedAnswer || !studentAnswer) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-      return NextResponse.json({ error: 'Missing GEMINI_API_KEY' }, { status: 500 });
+    const geminiUrl = process.env.GEMINI_API_URL || process.env.GENERATIVE_API_URL;
+
+    if (!geminiKey || !geminiUrl) {
+      return NextResponse.json({ error: 'Missing GEMINI_API_KEY or GEMINI_API_URL' }, { status: 500 });
     }
 
     const supabaseServerClient = getSupabaseServerClient();
 
-    const prompt = `
-You are an expert GCSE examiner. Grade the student's ANSWER against the EXPECTED ANSWER.
+    // Build a strict grading prompt
+    const prompt = `You are an expert GCSE examiner. Grade the student's ANSWER against the EXPECTED ANSWER.
 Return strictly parsable JSON:
 {
   "score": number,            // 0..maxScore (use maxScore 5 by default)
@@ -32,21 +33,17 @@ Return strictly parsable JSON:
   "hints": ["First hint", "Second hint - more revealing"]
 }
 
-QUESTION:
-${question}
+QUESTION:\n${question}
 
-EXPECTED_ANSWER:
-${expectedAnswer}
+EXPECTED_ANSWER:\n${expectedAnswer}
 
-STUDENT_ANSWER:
-${studentAnswer}
+STUDENT_ANSWER:\n${studentAnswer}
 
-Mark strictly and clearly, point out missing key terms and give up to 3 hints ordered from least revealing to most revealing.
-`;
+Mark strictly and clearly, point out missing key terms and give up to 3 hints ordered from least revealing to most revealing.`;
 
     const model = 'gemini-2.5-flash';
 
-    const resp = await fetch(`https://api.generativeai.example/v1/models/${model}:generate`, {
+    const resp = await fetch(`${geminiUrl}/v1/models/${model}:generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -97,20 +94,26 @@ Mark strictly and clearly, point out missing key terms and give up to 3 hints or
     const feedback = parsed.feedback ?? '';
     const hints = parsed.hints ?? [];
 
-    await supabaseServerClient.from('quiz_responses').insert({
-      quiz_session_id: quizSessionId ?? null,
-      user_id: userId,
-      question_text: question,
-      expected_answer: expectedAnswer,
-      user_answer: studentAnswer,
-      ai_score: score,
-      hints_used: 0,
-      feedback: { feedback, hints },
-    });
+    // Persist response
+    try {
+      await supabaseServerClient.from('quiz_responses').insert({
+        quiz_session_id: quizSessionId ?? null,
+        user_id: userId,
+        question,
+        expected_answer: expectedAnswer,
+        student_answer: studentAnswer,
+        score,
+        max_score: maxScore,
+        feedback,
+        hints_used: hints,
+      });
+    } catch (e) {
+      console.warn('Failed to insert quiz response', e);
+    }
 
-    return NextResponse.json({ score, maxScore, feedback, hints }, { status: 200 });
+    return NextResponse.json({ score, maxScore, feedback, hints });
   } catch (err) {
     console.error('grade-answer error', err);
-    return NextResponse.json({ error: 'Internal server error', details: String(err) }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error', details: String(err) }, { status: 500 });
   }
 }
