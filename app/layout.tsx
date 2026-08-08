@@ -3,6 +3,7 @@
 // Uses Tailwind CSS. Ensure tailwind.config.js is set up for dark mode and shadcn/ui integration.
 
 import './globals.css';
+import Script from 'next/script';
 import Image from 'next/image';
 import { ReactNode } from 'react';
 import Sidebar from './components/Sidebar';
@@ -16,12 +17,11 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <head>
-        {/* Quick Tailwind Play CDN fallback so the site gets immediate styles while we ensure the proper build pipeline is working on Vercel */}
-        <script>tailwind.config = {"darkMode":"class"}</script>
-        <script src="https://cdn.tailwindcss.com"></script>
-      </head>
       <body className="bg-[#0b1020] text-slate-100 antialiased">
+        {/* Tailwind Play CDN fallback - loaded before React (temporary) */}
+        <Script id="tailwind-config" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: "tailwind.config = { darkMode: 'class' }" }} />
+        <Script src="https://cdn.tailwindcss.com" strategy="beforeInteractive" />
+
         <div className="min-h-screen flex">
           {/* Desktop / iPad sidebar */}
           <aside className="hidden md:flex md:w-72 xl:w-96 flex-col bg-gradient-to-b from-[#07102a]/60 via-[#0b1536]/40 to-[#07102a]/60 backdrop-blur-md border-r border-slate-800/30 p-4">
