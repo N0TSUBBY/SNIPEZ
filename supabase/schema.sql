@@ -114,9 +114,15 @@ create policy "profiles_select_own" on profiles
 create policy "profiles_insert_own" on profiles
   for insert with check (id = auth.uid());
 
--- Allow update/delete only for the owner
-create policy "profiles_modify_own" on profiles
-  for update, delete using (id = auth.uid()) with check (id = auth.uid());
+-- Update policy for owner
+create policy "profiles_update_own" on profiles
+  for update
+  using (id = auth.uid())
+  with check (id = auth.uid());
+
+-- Delete policy for owner
+create policy "profiles_delete_own" on profiles
+  for delete using (id = auth.uid());
 
 -- Decks RLS
 alter table decks enable row level security;
@@ -127,8 +133,13 @@ create policy "decks_select_owner_or_public" on decks
 create policy "decks_insert_owner" on decks
   for insert with check (user_id = auth.uid());
 
-create policy "decks_modify_owner" on decks
-  for update, delete using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "decks_update_owner" on decks
+  for update
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+create policy "decks_delete_owner" on decks
+  for delete using (user_id = auth.uid());
 
 -- Flashcards RLS
 alter table flashcards enable row level security;
@@ -139,8 +150,13 @@ create policy "flashcards_select_owner" on flashcards
 create policy "flashcards_insert_owner" on flashcards
   for insert with check (user_id = auth.uid());
 
-create policy "flashcards_modify_owner" on flashcards
-  for update, delete using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "flashcards_update_owner" on flashcards
+  for update
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+create policy "flashcards_delete_owner" on flashcards
+  for delete using (user_id = auth.uid());
 
 -- Notes RLS
 alter table notes enable row level security;
@@ -151,31 +167,63 @@ create policy "notes_select_owner" on notes
 create policy "notes_insert_owner" on notes
   for insert with check (user_id = auth.uid());
 
-create policy "notes_modify_owner" on notes
-  for update, delete using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "notes_update_owner" on notes
+  for update
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+create policy "notes_delete_owner" on notes
+  for delete using (user_id = auth.uid());
 
 -- Quiz Sessions & Responses RLS
 alter table quiz_sessions enable row level security;
+
 create policy "quiz_sessions_select_owner" on quiz_sessions
   for select using (user_id = auth.uid());
+
 create policy "quiz_sessions_insert_owner" on quiz_sessions
   for insert with check (user_id = auth.uid());
-create policy "quiz_sessions_modify_owner" on quiz_sessions
-  for update, delete using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create policy "quiz_sessions_update_owner" on quiz_sessions
+  for update
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+create policy "quiz_sessions_delete_owner" on quiz_sessions
+  for delete using (user_id = auth.uid());
 
 alter table quiz_responses enable row level security;
+
 create policy "quiz_responses_select_owner" on quiz_responses
   for select using (user_id = auth.uid());
+
 create policy "quiz_responses_insert_owner" on quiz_responses
   for insert with check (user_id = auth.uid());
-create policy "quiz_responses_modify_owner" on quiz_responses
-  for update, delete using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create policy "quiz_responses_update_owner" on quiz_responses
+  for update
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+create policy "quiz_responses_delete_owner" on quiz_responses
+  for delete using (user_id = auth.uid());
 
 -- Uploads RLS
 alter table uploads enable row level security;
-create policy "uploads_select_owner" on uploads for select using (user_id = auth.uid());
-create policy "uploads_insert_owner" on uploads for insert with check (user_id = auth.uid());
-create policy "uploads_modify_owner" on uploads for update, delete using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create policy "uploads_select_owner" on uploads
+  for select using (user_id = auth.uid());
+
+create policy "uploads_insert_owner" on uploads
+  for insert with check (user_id = auth.uid());
+
+create policy "uploads_update_owner" on uploads
+  for update
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+create policy "uploads_delete_owner" on uploads
+  for delete using (user_id = auth.uid());
 
 -- Indexes for performance
 create index if not exists idx_flashcards_next_review_at on flashcards (next_review_at);

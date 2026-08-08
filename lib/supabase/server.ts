@@ -1,26 +1,39 @@
 // lib/supabase/server.ts
-// Server-side Supabase client for App Router server components and API routes.
-// Uses the Supabase service role key ONLY on trusted server environment (API routes).
-// IMPORTANT: Never expose SUPABASE_SERVICE_ROLE_KEY to the browser.
+// Safe server-side Supabase client factory.
+// This avoids throwing during module import when SUPABASE_SERVICE_ROLE_KEY is not set.
+// Use getSupabaseServerClient() inside API route handlers or server functions.
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 if (!supabaseUrl) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL env var');
+  // Warn but do not throw during import; runtime calls will throw with clearer message.
+  console.warn('Warning: NEXT_PUBLIC_SUPABASE_URL is not set. Ensure environment variables are configured in production.');
 }
 
-if (!supabaseServiceRoleKey) {
-  // For SSR routes that do not require the service role, you can create a keyless client:
-  // BUT many storage operations and admin-level tasks require the service role.
-  // Throwing here encourages the developer to provide the service role in server environments.
-  throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY env var for server operations');
-}
+/**
+ * Create a server-side Supabase client.
+ * If SUPABASE_SERVICE_ROLE_KEY exists we'll use it (full privileges).
+ * Otherwise fallback to using the anon key for non-admin operations.
+ *
+ * IMPORTANT: Do NOT expose a service role key to client-side code.
+ */
+export function getSupabaseServerClient(): SupabaseClient {
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabaseServerClient: SupabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
-  auth: {
-    persistSession: false,
-  },
-});
+  if (!supabaseUrl) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL env var');
+  }
+
+  if (serviceRole) {
+    return createClient(supabaseUrl, serviceRole, { auth: { persistSession: false } });
+  }
+
+  if (anonKey) {
+    return createClient(supabaseUrl, anonKey, { auth: { persistSession: false } });
+  }
+
+  throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_ANON_KEY. Add env vars in Vercel.');
+}
