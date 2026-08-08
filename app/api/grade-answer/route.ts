@@ -4,7 +4,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { supabaseServerClient } from '../../../lib/supabase/server';
+import { getSupabaseServerClient } from '../../../lib/supabase/server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing GEMINI_API_KEY' }, { status: 500 });
     }
 
-    // Build evaluation prompt tailored for GCSE marking schemes
+    const supabaseServerClient = getSupabaseServerClient();
+
     const prompt = `
 You are an expert GCSE examiner. Grade the student's ANSWER against the EXPECTED ANSWER.
 Return strictly parsable JSON:
@@ -43,7 +44,6 @@ ${studentAnswer}
 Mark strictly and clearly, point out missing key terms and give up to 3 hints ordered from least revealing to most revealing.
 `;
 
-    // Call Gemini (REST example). Replace with official SDK usage if applicable.
     const model = 'gemini-2.5-flash';
 
     const resp = await fetch(`https://api.generativeai.example/v1/models/${model}:generate`, {
@@ -67,7 +67,6 @@ Mark strictly and clearly, point out missing key terms and give up to 3 hints or
 
     const apiResult = await resp.json();
 
-    // Heuristic to extract text
     let modelText = '';
     if (apiResult.output?.[0]?.content?.[0]?.text) {
       modelText = apiResult.output[0].content[0].text;
@@ -79,7 +78,6 @@ Mark strictly and clearly, point out missing key terms and give up to 3 hints or
       modelText = JSON.stringify(apiResult);
     }
 
-    // Extract JSON block
     const jsonMatch = modelText.match(/\{[\s\S]*\}/);
     let parsed: any = null;
     if (jsonMatch) {
@@ -99,7 +97,6 @@ Mark strictly and clearly, point out missing key terms and give up to 3 hints or
     const feedback = parsed.feedback ?? '';
     const hints = parsed.hints ?? [];
 
-    // Persist response to DB for analytics
     await supabaseServerClient.from('quiz_responses').insert({
       quiz_session_id: quizSessionId ?? null,
       user_id: userId,

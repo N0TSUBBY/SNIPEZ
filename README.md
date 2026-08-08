@@ -1,57 +1,8 @@
-<div align="center">
+# SNIPEZ
 
-  <img src="https://github.com/user-attachments/assets/3ece1d97-bd37-4c35-a258-26090276af54" alt="SNIPEZ Logo" width="180" />
+This repository contains the SNIPEZ Next.js application (App Router). If Vercel reports "No Next.js version detected", ensure that:
 
-  # 🎯 SNIPEZ
+- package.json exists in the repository root and includes a "next" dependency (this file was added on branch `snipez-initial-setup`).
+- The Vercel project Root Directory setting matches the repository path containing package.json (or set to the repo root if package.json is there).
 
-  **Precision Revision & AI-Powered Study Partner**
-
-  [![Next.js](https://img.shields.io/badge/Next.js_14-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-  [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-  [![Google Gemini](https://img.shields.io/badge/Gemini_2.5_Flash-8E75B2?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
-  [![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
-
-  <p align="center">
-    A high-performance, cross-platform GCSE revision suite built to turn raw notes and textbook photos into active recall flashcards, interactive quizzes, and AI-marked exam practice.
-  </p>
-
-  <a href="#-key-features">Key Features</a> •
-  <a href="#-tech-stack">Tech Stack</a> •
-  <a href="#-getting-started">Getting Started</a> •
-  <a href="#-database-setup">Database Setup</a> •
-  <a href="#-deployment">Deployment</a>
-
-</div>
-
----
-
-## 🔥 Overview
-
-**SNIPEZ** is engineered to replace passive reading with high-efficiency active recall. By leveraging **Google Gemini 2.5 Flash**, SNIPEZ automatically parses written notes or uploaded photos (textbooks, whiteboards, handwritten pages) to extract core concepts, summarize key points, generate spaced-repetition flashcards, and grade practice responses against standard GCSE mark schemes.
-
-Designed with a dark-mode first UI using a bold **electric blue and red** theme, SNIPEZ is fully optimized for **PC, iPad, and mobile devices**.
-
----
-
-## ⚡ Key Features
-
-* **📸 Multimodal Image-to-Notes:** Upload photos of handwritten notes or exam papers to instantly generate structured summaries and flashcards.
-* **🧠 Spaced Repetition Flashcards:** Smart flashcard player with card flipping, review scheduling, keyboard hotkeys on PC, and touch gestures on mobile.
-* **📝 Interactive AI Practice Engine:** Practice topic questions with real-time feedback, progressive hints when you get stuck, and automated AI marking based on official mark schemes.
-* **📚 GCSE Past Papers & Revision Hub:** Access organized past paper links, mark schemes, and topic guides across major exam boards (AQA, Edexcel, OCR, WJEC).
-* **🔒 Secure User Authentication:** Full auth flow powered by Supabase with Row Level Security (RLS) keeping your cards, decks, and revision history private.
-* **📱 Ultra-Responsive UX:** Tailored layouts for every screen size—collapsible sidebar for PC/iPad and a fluid bottom bar for mobile.
-
----
-
-## 🛠️ Tech Stack
-
-* **Framework:** [Next.js 14](https://nextjs.org/) (App Router, TypeScript)
-* **Styling:** [Tailwind CSS](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/), [Framer Motion](https://www.framer.com/motion/)
-* **Database & Auth:** [Supabase](https://supabase.com/) (PostgreSQL, Supabase Auth, Storage)
-* **AI Engine:** [Google Gemini API](https://ai.google.dev/) (`@google/genai` SDK using `gemini-2.5-flash`)
-* **Deployment:** [Vercel](https://vercel.com/)
-
----
-
+If you'd like, I can open a pull request merging branch `snipez-initial-setup` into `main` once you verify.
