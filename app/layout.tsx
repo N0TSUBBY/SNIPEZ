@@ -16,6 +16,11 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        {/* Quick Tailwind Play CDN fallback so the site gets immediate styles while we ensure the proper build pipeline is working on Vercel */}
+        <script>tailwind.config = {"darkMode":"class"}</script>
+        <script src="https://cdn.tailwindcss.com"></script>
+      </head>
       <body className="bg-[#0b1020] text-slate-100 antialiased">
         <div className="min-h-screen flex">
           {/* Desktop / iPad sidebar */}

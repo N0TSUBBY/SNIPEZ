@@ -17,6 +17,8 @@ body {
   color: #e6eef8;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* sensible system sans-serif fallback while a proper font stack is added */
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
 /* Glassmorphism card */
