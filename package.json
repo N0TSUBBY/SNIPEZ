@@ -14,8 +14,10 @@
     "react-dom": "18.2.0",
     "@supabase/supabase-js": "^2.36.0",
     "lucide-react": "^0.268.0",
-    "framer-motion": "^10.12.16",
-    "@google/genai": "^0.0.0"
+    "framer-motion": "^10.12.16"
+  },
+  "engines": {
+    "node": "18.x"
   },
   "devDependencies": {
     "typescript": "^5.2.0",
